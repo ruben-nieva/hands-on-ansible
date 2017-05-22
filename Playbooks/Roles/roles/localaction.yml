@@ -1,0 +1,15 @@
+--- # localaction
+- hosts: apacheweb
+  user: test
+  connection: ssh
+  gather_facts: no
+  sudo: yes
+  tasks:
+    - name: ping the local server before installing on apacheweb
+      local_action: command ping -c 4 server4
+      register: result
+    - debug: var=result
+    - name: install lynx
+      yum: pkg=lynx state=latest
+
+

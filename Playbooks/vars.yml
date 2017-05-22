@@ -1,0 +1,2 @@
+control_server: control
+web_root: /var/www/html/

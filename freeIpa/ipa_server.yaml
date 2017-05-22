@@ -1,0 +1,82 @@
+---
+
+- hosts: gcp
+  
+  vars_files:
+    - stuff.yml
+
+  become: yes
+  tasks:
+
+  - name: Install Git
+    yum: name=git state=present
+
+  - name: Git Repo Clone
+    git: 
+      repo: https://github.com/WomenInLinux/ansible-wil-wednesday
+      dest: /opt/women
+      clone: yes
+  
+  - name: Install FreeIPA packages
+    yum: name={{item}} state=installed
+    with_items:
+      - haveged
+      - ipa-server
+      - ipa-server-dns
+      - bind-dyndb-ldap
+
+  - name: Start haveged service
+    service:
+      name: haveged
+      state: started
+      enabled: yes
+
+  - name: Check if FreeIPA is already installed
+    stat:
+      path=/root/cacert.p12
+    register: labipa_status
+
+  - name: "Configure FreeIPA server"
+    shell:
+      "
+        ipa-server-install \
+          --setup-dns \
+          --domain={{ domain_name }} \
+          --realm={{ ipa_realm }} \
+          --ds-password={{ ldap_directory_manager_password }} \
+          --admin-password={{ ipa_admin_password }} \
+          --forwarder={{ ansible_dns.nameservers[0] }} \
+          --reverse-zone={{ reverse_dns }} \
+          --unattended
+       "
+    when: labipa_status.stat.exists == false
+
+  - name: "Start & Enable krb5kdc/firewalld services"
+    service:
+      name="{{ item }}"
+      state="started"
+      enabled="yes"
+    with_items:
+      - krb5kdc
+      - firewalld
+
+  - name: "Open needed ports in firewalld"
+    firewalld:
+      service="{{ item }}"
+      permanent="yes"
+      state="enabled"
+      immediate="yes"
+    with_items:
+      - http
+      - https
+      - ldap
+      - ldaps
+      - kerberos
+      - kpasswd
+      - dns
+      - ntp
+  
+          
+
+    
+  

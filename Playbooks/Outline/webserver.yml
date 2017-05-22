@@ -1,0 +1,34 @@
+--- # Outline to Playbook Translation
+
+- hosts: apacheweb
+  user: vagrant
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: date/time stamp for when the playbook start
+    command: /usr/bin/date
+    register: timestamp_start
+  - debug: timestamp_start
+  - name: install the apache web server
+    yum: pkg=httpd state=latest
+    notify: Start HTTPD
+
+  - name: start the web service
+    service: name=httpd state=restarted
+  - name: verify that the service is running
+    command: systemctl status httpd
+    register: result
+  - debug: var=result
+  - name: install client software - telnet
+    yum: pkg=telnet state=latest
+  - name: install lynx
+    yum: pkg=telnet state=latest
+  - name: log all the package install on the system
+    raw: yum list installed > /vagrant/installed.log
+  - name: date/time stamp for when the playbook ends
+    raw: /usr/bin/date > /vagrant/playbook_end.log
+
+  handlers: 
+  - name: Start HTTPD
+    service: name=htppd state=restarted
+

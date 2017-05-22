@@ -1,0 +1,81 @@
+Ansible
+
+$ ansible all --list-hosts
+
+$ ansible apacheweb -m ping
+web | SUCCESS => {
+    "changed": false, 
+    "ping": "pong"
+}
+
+$ ansible redhat -b -m shell -a 'yum install -y lynx'
+
+$ ansible apacheweb -b -m shell -a 'cat /var/log/xxx.log'
+web | FAILED | rc=1 >>
+cat: /var/log/xxx.log: No such file or directory
+
+$ ansible apacheweb -m setup -a 'filter=*ipv4*'
+web | SUCCESS => {
+    "ansible_facts": {
+        "ansible_all_ipv4_addresses": [
+            "192.168.33.20", 
+            "10.0.2.15"
+        ], 
+        "ansible_default_ipv4": {
+            "address": "10.0.2.15", 
+            "alias": "eth0", 
+            "broadcast": "10.0.2.255", 
+            "gateway": "10.0.2.2", 
+            "interface": "eth0", 
+            "macaddress": "52:54:00:ba:51:2b", 
+            "mtu": 1500, 
+            "netmask": "255.255.255.0", 
+            "network": "10.0.2.0", 
+            "type": "ether"
+        }
+    }, 
+    "changed": false
+
+
+$ ansible apacheweb -m setup -a 'filter=ansible_architecture'
+web | SUCCESS => {
+    "ansible_facts": {
+        "ansible_architecture": "x86_64"
+    }, 
+    "changed": false
+}
+
+
+$ ansible apacheweb -b -m yum -a 'pkg=lynx state=installed update_cache=true'
+web | SUCCESS => {
+    "changed": false, 
+    "msg": "", 
+    "rc": 0, 
+    "results": [
+        "lynx-2.8.8-0.3.dev15.el7.x86_64 providing lynx is already installed"
+    ]
+}
+
+-------------------------------------------------------------------------------------------------------------------------------
+Playbooks
+=========
+
+$ ansible-playbook -b appserver.yml 
+
+PLAY [appserver] *******************************************************************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************
+ok: [db]
+
+TASK [Install Lynx on App servers] *************************************************************************************************************
+ok: [db]
+
+PLAY RECAP *************************************************************************************************************************************
+db           : ok=2    changed=0    unreachable=0    failed=0
+
+
+
+
+
+
+

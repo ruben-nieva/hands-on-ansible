@@ -1,0 +1,50 @@
+---
+- name: "Install VSFTPD"
+  yum:
+    name="vsftpd"
+    state="present"
+
+- name: "Open ftp ports in firewall"
+  firewalld:
+    service="ftp"
+    permanent="yes"
+    state="enabled"
+    immediate="yes"
+
+- name: "start vsftpd service & enable it to start after reboot"
+  service:
+    name="vsftpd"
+    state="started"
+    enabled="yes"
+
+- name: "Check if cacert.p12 exists in /var/ftp/pub"
+  stat:
+    path="/var/ftp/pub/cacert.p12"
+  register: cacert_state
+
+- name: "Copy FreeIPA certificate authority file to /var/ftp/pub"
+  shell: cp /root/cacert.p12 /var/ftp/pub
+  when: cacert_state.stat.exists == false
+
+- name: "Obtain TGT for admin user"
+  shell: echo "{{ ipa_admin_password }}" | kinit admin
+
+# see https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Linux_Domain_Identity_Authentication_and_Policy_Guide/Configuring_IPA_Users-Specifying_Default_User_Settings.html
+- name: change FreeIPA user defaults
+  shell: ipa config-mod --homedirectory /home/ldap --defaultshell /bin/bash --maxusername 32
+  when: labipa_status.stat.exists == false
+
+- name: "Add user to FreeIPA"
+  shell: echo $'{{ ipa_admin_password }}\n{{ ipa_admin_password }}' | ipa user-add {{ item.user }} --first {{ item.first }} --last {{ item.last }} --password; sleep 1;echo $'{{ ipa_admin_password }}\n{{ ipa_admin_password }}\n{{ ipa_admin_password }}'| kinit {{ item.user }};echo $'{{ ipa_admin_password }}'| kinit admin
+  with_items: "{{ labipa_users }}"
+  register: output
+  failed_when: output.changed == false
+
+- name: create ldap directory
+  file:
+      path: /home/ldap
+      state: directory
+# TODO make nfs4 share
+# mkdir /home/ldap/ldapuser1
+# chown ldapuser1:ldapuser1 /home/ldap/ldapuser1
+# for i in ldapuser1 ldapuser2 ldapuser3 ldapuser4 ldapuser5 isabelle; do mkdir /home/ldap/$i; chown $i:$i /home/ldap/$i; done
